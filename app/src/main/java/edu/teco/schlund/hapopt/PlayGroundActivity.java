@@ -104,7 +104,7 @@ public class PlayGroundActivity extends AppCompatActivity {
             advice.setText("Klick den Button bevor der Pfeil verschwindet!");
         advice.setVisibility(View.VISIBLE);
         if(gameSkills.equals("radioHapt")||gameSkills.equals("radioBoth")) {
-            progressDialog = ProgressDialog.show(this, "Working..", "Trying to connect to BLEDevice...", true,
+            progressDialog = ProgressDialog.show(this, "In Arbeit...", "Versuche mit Handschuh zu verbinden...", true,
                     false);
             startBluetoothDetection();
         }
@@ -292,14 +292,13 @@ public class PlayGroundActivity extends AppCompatActivity {
     private BluetoothAdapter mBluetoothAdapter;
     private String mBluetoothDeviceAddress;
     private BluetoothGatt mBluetoothGatt;
+    private BluetoothGattCharacteristic motorControlCharacteristic;
 
 
-    private final static UUID SMARTAQ_SERVICE_UUID =
-            UUID.fromString("6e57fcf9-8064-4995-a3a8-e5ca44552192");
+    private final static UUID HAPTOPT_SERVICE_UUID =
+            UUID.fromString("713D000 713D000 0-503E 503E -4C754C75 4C75-BA94 BA94BA94-3148F18D941E 3148F18D941E 3148F18D941E");
     private final static UUID CHARACTERISTIC_UUID =
-            UUID.fromString("7a812f99-06fa-4d89-819d-98e9aafbd4ef");
-    private final static UUID DESCRIPTOR_UUID =
-            UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
+            UUID.fromString("713D000 713D000 713D000 713D0003-503E -4C75 4C75-BA94BA94 BA94-3148F18D941E 3148F18D941E3148F18D941E 3148F18D941E 3148F18D941E");
 
 
     public final static String ACTION_GATT_CONNECTED =
@@ -332,7 +331,7 @@ public class PlayGroundActivity extends AppCompatActivity {
             progressDialog.dismiss();
             final Activity factivity = (Activity) this;
             AlertDialog.Builder alert = new AlertDialog.Builder(this);
-            alert.setMessage("Bluetooth not supported!").setTitle("Bluetooth Connectivity");
+            alert.setMessage("Bluetooth wird von diesem Gerät nicht unterstützt!").setTitle("Bluetooth Connectivity");
             alert.setPositiveButton("OK", new DialogInterface.OnClickListener() {
                 public void onClick(DialogInterface dialog, int id) {
                     dialog.cancel();
@@ -353,7 +352,8 @@ public class PlayGroundActivity extends AppCompatActivity {
             Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
         }
-        initialize();
+        startDetectingDevices();
+        //initialize();
     }
 
 
@@ -364,15 +364,8 @@ public class PlayGroundActivity extends AppCompatActivity {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
             BluetoothDevice device = result.getDevice();
-            if(device.getName() != null && device.getName().contains("TECO-AQNode")) {
+            if(device.getName() != null && device.getName().contains("TECO Wearable 3")) {
                 gloveDevice = device;
-                btScanner.stopScan(bleScanCallback);
-//                AsyncTask.execute(new Runnable() {
-//                    @Override
-//                    public void run() {
-//                        btScanner.stopScan(bleScanCallback);
-//                    }
-//                });
             }
         }
     };
@@ -389,10 +382,30 @@ public class PlayGroundActivity extends AppCompatActivity {
             }
         });
 
+        final Activity fActivity = this;
         mHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
                 btScanner.stopScan(bleScanCallback);
+                if(gloveDevice!= null) {
+                    initializeConnection();
+                } else {
+                    AlertDialog.Builder alert = new AlertDialog.Builder(fActivity);
+                    alert.setMessage("Handschuh nicht gefunden! Nochmal versuchen?").setTitle("Bluetooth Connectivity");
+                    alert.setPositiveButton("Ja", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            dialog.cancel();
+                            startDetectingDevices();
+                        }
+                    });
+                    alert.setNegativeButton("Nein", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            dialog.cancel();
+                            fActivity.finish();
+                        }
+                    });
+                    alert.show();
+                }
                 //TODO: Is that needed?
 //                AsyncTask.execute(new Runnable() {
 //                    @Override
@@ -404,9 +417,10 @@ public class PlayGroundActivity extends AppCompatActivity {
                 //noDeviceDetected();
             }
         }, SCAN_PERIOD);
+
     }
 
-    public void initialize() {
+    public void initializeConnection() {
         // For API level 18 and above, get a reference to BluetoothAdapter through
         // BluetoothManager.
         if (mBluetoothManager == null) {
@@ -461,11 +475,28 @@ public class PlayGroundActivity extends AppCompatActivity {
         // parameter to false.
         mBluetoothGatt = device.connectGatt(this, false, mGattCallback);
         Log.d(TAG, "Trying to create a new connection.");
+        final Activity fActivity = this;
         mHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                if(progressDialog.isShowing())
+                if(progressDialog.isShowing()){
                     progressDialog.dismiss();
+                }
+                AlertDialog.Builder alert = new AlertDialog.Builder(fActivity);
+                alert.setMessage("Handschuh nicht verbunden! Nochmal versuchen?").setTitle("Bluetooth Connectivity");
+                alert.setPositiveButton("Ja", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        dialog.cancel();
+                        startDetectingDevices();
+                    }
+                });
+                alert.setNegativeButton("Nein", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        dialog.cancel();
+                        fActivity.finish();
+                    }
+                });
+                alert.show();
             }
         }, SCAN_PERIOD);
 
@@ -474,6 +505,7 @@ public class PlayGroundActivity extends AppCompatActivity {
 
     // Implements callback methods for GATT events that the app cares about.  For example,
     // connection change and services discovered.
+    final Activity fActivity = this;
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
@@ -482,7 +514,6 @@ public class PlayGroundActivity extends AppCompatActivity {
                 case BluetoothProfile.STATE_CONNECTED:
                     intentAction = ACTION_GATT_CONNECTED;
                     Log.i(TAG, "Connected to GATT server.");
-                    progressDialog.dismiss();
                     mBluetoothGatt.discoverServices();
                     break;
                 case BluetoothProfile.STATE_DISCONNECTED:
@@ -495,8 +526,18 @@ public class PlayGroundActivity extends AppCompatActivity {
         @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                BluetoothGattService service = mBluetoothGatt.getService(SMARTAQ_SERVICE_UUID);
-                BluetoothGattCharacteristic characteristic = service.getCharacteristic(CHARACTERISTIC_UUID);
+                if(progressDialog.isShowing())
+                    progressDialog.dismiss();
+                AlertDialog.Builder alert = new AlertDialog.Builder(fActivity);
+                alert.setMessage("Bluetooth wird von diesem Gerät nicht unterstützt!").setTitle("Bluetooth Connectivity");
+                alert.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        dialog.cancel();
+                    }
+                });
+                alert.show();
+                BluetoothGattService service = mBluetoothGatt.getService(HAPTOPT_SERVICE_UUID);
+                motorControlCharacteristic = service.getCharacteristic(CHARACTERISTIC_UUID);
             } else {
                 Log.w(TAG, "onServicesDiscovered received: " + status);
             }
