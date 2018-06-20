@@ -2,6 +2,7 @@ package edu.teco.schlund.hapopt.bluetooth;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
@@ -37,14 +38,13 @@ public class BluetoothDetection {
     private BluetoothAdapter mBluetoothAdapter;
     private String mBluetoothDeviceAddress;
     private BluetoothGatt mBluetoothGatt;
+    private BluetoothGattCharacteristic motorControlCharacteristic;
 
 
-    private final static UUID SMARTAQ_SERVICE_UUID =
-            UUID.fromString("6e57fcf9-8064-4995-a3a8-e5ca44552192");
+    private final static UUID HAPTOPT_SERVICE_UUID =
+            UUID.fromString("713D000 713D000 0-503E 503E -4C754C75 4C75-BA94 BA94BA94-3148F18D941E 3148F18D941E 3148F18D941E");
     private final static UUID CHARACTERISTIC_UUID =
-            UUID.fromString("7a812f99-06fa-4d89-819d-98e9aafbd4ef");
-    private final static UUID DESCRIPTOR_UUID =
-            UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
+            UUID.fromString("713D000 713D000 713D000 713D0003-503E -4C75 4C75-BA94BA94 BA94-3148F18D941E 3148F18D941E3148F18D941E 3148F18D941E 3148F18D941E");
 
 
     public final static String ACTION_GATT_CONNECTED =
@@ -66,9 +66,16 @@ public class BluetoothDetection {
     // Stops scanning after 15 seconds.
     private Handler mHandler = new Handler();
     private static final long SCAN_PERIOD = 20000;
+    private ProgressDialog progressDialog;
+
 
     public BluetoothDetection(Activity activity){
         this.activity = activity;
+    }
+
+    public void startBluetoothDetection(){
+        progressDialog = ProgressDialog.show(activity, "In Arbeit...", "Versuche mit Handschuh zu verbinden...", true,
+                false);
         BluetoothAdapter btAdapter = ((BluetoothManager) activity.getSystemService(android.content.Context.BLUETOOTH_SERVICE)).getAdapter();
         //Check if Bluetooth is supported
         if (btAdapter == null) {
@@ -94,7 +101,9 @@ public class BluetoothDetection {
             Intent enableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             activity.startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
         }
+        startDetectingDevices();
     }
+
 
     // Device scan callback.
     private ScanCallback bleScanCallback = new ScanCallback() {
@@ -103,10 +112,12 @@ public class BluetoothDetection {
         @Override
         public void onScanResult(int callbackType, ScanResult result) {
             BluetoothDevice device = result.getDevice();
-            if(device.getName() != null && device.getName().contains("TECO-AQNode")) {
+            if(device.getName() != null && device.getName().contains("TECO Wearable 3")) {
+                gloveDevice = device;
             }
         }
     };
+
 
     /*
      * Scanning for SmartAQNet Services
@@ -115,65 +126,67 @@ public class BluetoothDetection {
         AsyncTask.execute(new Runnable() {
             @Override
             public void run() {
-                btScanner.startScan(new ScanCallback() {
-                                        // Is triggered for every Bluetooth device found
-                                        // Teco Devices will be identified by device name
-                                        @Override
-                                        public void onScanResult(int callbackType, ScanResult result) {
-                                            BluetoothDevice device = result.getDevice();
-                                            if (device.getName() != null && device.getName().contains("TECO-AQNode")) {
-                                                gloveDevice = device;
-                                                btScanner.stopScan(bleScanCallback);
-                                                connect();
-                                                //TODO: Is that needed?
-//                            AsyncTask.execute(new Runnable() {
-//                                @Override
-//                                public void run() {
-//                                    btScanner.stopScan(bleScanCallback);
-//                                }
-//                            });
-                                            }
-                                        }
-                                    }
-                );
+                btScanner.startScan(bleScanCallback);
             }
         });
 
+        final Activity fActivity = activity;
         mHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                btScanner.stopScan(bleScanCallback);
-                //TODO: Is that needed?
-//                AsyncTask.execute(new Runnable() {
-//                    @Override
-//                    public void run() {
-//                        btScanner.stopScan(bleScanCallback);
-//                    }
-//                });
-                //TODO: return to SelectHaptOptActivity
-                //noDeviceDetected();
+
+                //Stop scanning
+                AsyncTask.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        btScanner.stopScan(bleScanCallback);
+                    }
+                });
+
+                if(gloveDevice!= null) {
+                    initializeConnection();
+                } else {
+                    AlertDialog.Builder alert = new AlertDialog.Builder(fActivity);
+                    alert.setMessage("Handschuh nicht gefunden! Nochmal versuchen?").setTitle("Bluetooth Connectivity");
+                    alert.setPositiveButton("Ja", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            dialog.cancel();
+                            startDetectingDevices();
+                        }
+                    });
+                    alert.setNegativeButton("Nein", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            dialog.cancel();
+                            fActivity.finish();
+                        }
+                    });
+                    alert.show();
+                }
             }
         }, SCAN_PERIOD);
+
     }
 
-    public boolean initialize() {
+    public void initializeConnection() {
         // For API level 18 and above, get a reference to BluetoothAdapter through
         // BluetoothManager.
         if (mBluetoothManager == null) {
             mBluetoothManager = (BluetoothManager) activity.getSystemService(Context.BLUETOOTH_SERVICE);
             if (mBluetoothManager == null) {
                 Log.e(TAG, "Unable to initialize BluetoothManager.");
-                return false;
+                //TODO:Fehler abfangen
+                return;
             }
         }
 
         mBluetoothAdapter = mBluetoothManager.getAdapter();
         if (mBluetoothAdapter == null) {
             Log.e(TAG, "Unable to obtain a BluetoothAdapter.");
-            return false;
+            //TODO: Fehler abfangen
+            return;
         }
 
-        return true;
+        connect();
     }
 
     /**
@@ -185,30 +198,56 @@ public class BluetoothDetection {
      *         {@code BluetoothGattCallback#onConnectionStateChange(android.bluetooth.BluetoothGatt, int, int)}
      *         callback.
      */
-    public boolean connect( ) {
+    public void connect( ) {
         // Previously connected device.  Try to reconnect.
         final String address = gloveDevice.getAddress();
         if (mBluetoothDeviceAddress != null && address.equals(mBluetoothDeviceAddress)
                 && mBluetoothGatt != null) {
             Log.d(TAG, "Trying to use an existing mBluetoothGatt for connection.");
             if (mBluetoothGatt.connect()) {
-                return true;
+                return;
             } else {
-                return false;
+                //TODO:Fehler behandeln
+                return;
             }
         }
 
         final BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
         if (device == null) {
             Log.w(TAG, "Device not found.  Unable to connect.");
-            return false;
+            //TODO:Fehler behandeln
+            return;
         }
         // We want to directly connect to the device, so we are setting the autoConnect
         // parameter to false.
         mBluetoothGatt = device.connectGatt(activity, false, mGattCallback);
         Log.d(TAG, "Trying to create a new connection.");
+        final Activity fActivity = activity;
+        mHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if(progressDialog.isShowing()){
+                    progressDialog.dismiss();
+                }
+                AlertDialog.Builder alert = new AlertDialog.Builder(fActivity);
+                alert.setMessage("Handschuh nicht verbunden! Nochmal versuchen?").setTitle("Bluetooth Connectivity");
+                alert.setPositiveButton("Ja", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        dialog.cancel();
+                        startDetectingDevices();
+                    }
+                });
+                alert.setNegativeButton("Nein", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        dialog.cancel();
+                        fActivity.finish();
+                    }
+                });
+                alert.show();
+            }
+        }, SCAN_PERIOD);
+
         mBluetoothDeviceAddress = address;
-        return true;
     }
 
     // Implements callback methods for GATT events that the app cares about.  For example,
@@ -233,8 +272,11 @@ public class BluetoothDetection {
         @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                BluetoothGattService service = mBluetoothGatt.getService(SMARTAQ_SERVICE_UUID);
-                BluetoothGattCharacteristic characteristic = service.getCharacteristic(CHARACTERISTIC_UUID);
+                if(progressDialog.isShowing())
+                    progressDialog.dismiss();
+                BluetoothGattService service = mBluetoothGatt.getService(HAPTOPT_SERVICE_UUID);
+                motorControlCharacteristic = service.getCharacteristic(CHARACTERISTIC_UUID);
+                //TODO:Variablen fü Characteristic setzen schicken
             } else {
                 Log.w(TAG, "onServicesDiscovered received: " + status);
             }

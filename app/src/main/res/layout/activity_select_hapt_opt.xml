@@ -50,7 +50,7 @@
         android:layout_marginTop="8sp"
         android:backgroundTint="@android:color/holo_orange_light"
         android:onClick="sendMessage"
-        android:text="Test starten"
+        android:text="Weiter"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.502"
