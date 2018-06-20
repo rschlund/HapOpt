@@ -249,7 +249,7 @@ public class PlayGroundActivity extends AppCompatActivity {
 
     private void stopGame(){
         Intent intent = new Intent(this, ResultActivity.class);
-        Double averageMillis = countMillis * 1.0/(runs*1000000);
+        Double averageMillis = countMillis * 1.0/((runs-errorCount)*1000000);
         averageMillis = Math.round(averageMillis*100.0)/100.0;
         intent.putExtra("GameType", getIntent().getStringExtra("GameType"));
         intent.putExtra("ReactionTime", String.valueOf(averageMillis));
@@ -505,7 +505,6 @@ public class PlayGroundActivity extends AppCompatActivity {
 
     // Implements callback methods for GATT events that the app cares about.  For example,
     // connection change and services discovered.
-    final Activity fActivity = this;
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
@@ -528,14 +527,6 @@ public class PlayGroundActivity extends AppCompatActivity {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 if(progressDialog.isShowing())
                     progressDialog.dismiss();
-                AlertDialog.Builder alert = new AlertDialog.Builder(fActivity);
-                alert.setMessage("Bluetooth wird von diesem Gerät nicht unterstützt!").setTitle("Bluetooth Connectivity");
-                alert.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        dialog.cancel();
-                    }
-                });
-                alert.show();
                 BluetoothGattService service = mBluetoothGatt.getService(HAPTOPT_SERVICE_UUID);
                 motorControlCharacteristic = service.getCharacteristic(CHARACTERISTIC_UUID);
             } else {
