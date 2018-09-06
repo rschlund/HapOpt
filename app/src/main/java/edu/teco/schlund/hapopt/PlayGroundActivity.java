@@ -79,7 +79,7 @@ public class PlayGroundActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_play_ground);
 
-        //Make sure bluetooth is on
+        //Make sure bluetooth is turned on
         switchBluetoothOn(this);
 
         gameType = getIntent().getStringExtra("GameType");
