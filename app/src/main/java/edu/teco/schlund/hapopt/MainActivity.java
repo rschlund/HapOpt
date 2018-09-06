@@ -1,7 +1,9 @@
 package edu.teco.schlund.hapopt;
 
+import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.support.v7.app.AppCompatActivity;
@@ -24,6 +26,7 @@ public class MainActivity extends AppCompatActivity {
         mainActivity = this;
         //Make sure Bluetooth is on
         switchBluetoothOn(this);
+        registerReceiver(bleUpdateReceiver, bleUpdateIntentFilter());
         Intent bleServiceIntent = new Intent(this, BlueToothService.class);
         startService(bleServiceIntent);
         setContentView(R.layout.activity_main);
@@ -48,17 +51,30 @@ public class MainActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
-    private final BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
+    private final BroadcastReceiver bleUpdateReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             final String action = intent.getAction();
+            if(intent.getAction() == BlueToothService.DEVICENOTFOUND) {
+                AlertDialog.Builder alert = new AlertDialog.Builder(mainActivity);
+                alert.setMessage(action).setTitle("Bluetooth Connectivity");
+                alert.setNeutralButton("Ok", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        dialog.cancel();
+                    }
+                });
+                alert.show();
+            } else {
+
+            }
         }
     };
 
-    private static IntentFilter makeGattUpdateIntentFilter() {
+    private static IntentFilter bleUpdateIntentFilter() {
         final IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(BlueToothService.NOBLUETOOTH);
         intentFilter.addAction(BlueToothService.CONNECTIONLOST);
+        intentFilter.addAction(BlueToothService.DEVICENOTFOUND);
         return intentFilter;
     }
 

@@ -28,8 +28,9 @@ import java.util.UUID;
 public class BlueToothService extends Service {
 
     private final static String TAG = BlueToothService.class.getSimpleName();
-    public final static String NOBLUETOOTH = "NOBLUETOOTH";
-    public final static String CONNECTIONLOST = "CONNECTIONLOST";
+    public final static String NOBLUETOOTH = "Kein Bluetooth verfügbar!";
+    public final static String CONNECTIONLOST = "Verbindung abgebrochen!";
+    public final static String DEVICENOTFOUND = "Handschuh nicht gefunden! Nochmal versuchen?";
 
 
     private Boolean running = false;
@@ -160,25 +161,7 @@ public class BlueToothService extends Service {
                 if(gloveDevice!= null) {
                     connect();
                 } else {
-                    if (progressDialog.isShowing()) {
-                        progressDialog.dismiss();
-                    }
-                    AlertDialog.Builder alert = new AlertDialog.Builder(activity);
-                    alert.setMessage("Handschuh nicht gefunden! Nochmal versuchen?").setTitle("Bluetooth Connectivity");
-                    alert.setPositiveButton("Ja", new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialog, int id) {
-                            dialog.cancel();
-                            progressDialog.show();
-                            startDetectingDevices();
-                        }
-                    });
-                    alert.setNegativeButton("Nein", new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialog, int id) {
-                            dialog.cancel();
-                            activity.finish();
-                        }
-                    });
-                    alert.show();
+                    broadcastUpdate(DEVICENOTFOUND);
                 }
             }
         }, SCAN_PERIOD);
