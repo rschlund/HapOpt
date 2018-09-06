@@ -18,6 +18,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         //Make sure Bluetooth is on
         switchBluetoothOn(this);
+        Intent bleServiceIntent = new Intent(this, BlueToothService.class);
+        startService(bleServiceIntent);
         setContentView(R.layout.activity_main);
     }
 

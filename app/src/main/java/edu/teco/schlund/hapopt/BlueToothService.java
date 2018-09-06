@@ -28,6 +28,8 @@ public class BlueToothService extends Service {
 
     private final static String TAG = BlueToothService.class.getSimpleName();
 
+    private Boolean running = false;
+
     //High level manager used to obtain an instance of an BluetoothAdapter and to conduct overall Bluetooth Management
     private BluetoothManager mBluetoothManager;
 
@@ -62,9 +64,22 @@ public class BlueToothService extends Service {
         this.activity = activity;
     }
 
+    public BlueToothService() {
+        this.activity = null;
+    }
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if(!running){
+            startBluetoothDetection();
+        }
+        running = true;
         return START_REDELIVER_INTENT;
+    }
+
+    @Override
+    public void onDestroy() {
+        running = false;
     }
 
     @Override
@@ -245,4 +260,27 @@ public class BlueToothService extends Service {
         }
     };
 
+    //Sets motor indicating which finger button should be clicked
+    protected boolean setMotorCharacteristic(byte[] byteValue) {
+        //BluetoothManager ble_manager = (BluetoothManager)getSystemService(BLUETOOTH_SERVICE);
+        //if (mBluetoothGatt != null && ble_manager!= null && ble_manager.getConnectionState(mBluetoothGatt.getDevice(), BluetoothProfile.GATT) == BluetoothProfile.STATE_CONNECTED) {
+        if (mBluetoothGatt != null && mBluetoothManager!= null && mBluetoothManager.getConnectionState(mBluetoothGatt.getDevice(), BluetoothProfile.GATT) == BluetoothProfile.STATE_CONNECTED) {
+            motorControlCharacteristic.setValue(byteValue);
+            boolean status = mBluetoothGatt.writeCharacteristic(motorControlCharacteristic);
+            //Device returns error
+            if (!status) {
+                Intent intent=new Intent();
+                activity.setResult(SelectHaptOptActivity.CONNECTIONLOST,intent);
+                activity.finish();//finishing activity
+                Log.d(TAG, "Status Fehler!");
+                return false;
+            }
+            return true;
+        } else {
+            Intent intent=new Intent();
+            activity.setResult(SelectHaptOptActivity.CONNECTIONLOST,intent);
+            activity.finish();//finishing activity
+            return false;
+        }
+    }
 }
