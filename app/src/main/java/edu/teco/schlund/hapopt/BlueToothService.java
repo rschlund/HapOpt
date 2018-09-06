@@ -1,8 +1,5 @@
 package edu.teco.schlund.hapopt;
 
-import android.app.Activity;
-import android.app.AlertDialog;
-import android.app.ProgressDialog;
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -16,8 +13,9 @@ import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanResult;
 import android.content.BroadcastReceiver;
-import android.content.DialogInterface;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.IBinder;
@@ -28,12 +26,8 @@ import java.util.UUID;
 public class BlueToothService extends Service {
 
     private final static String TAG = BlueToothService.class.getSimpleName();
-    public final static String NOBLUETOOTH = "Kein Bluetooth verfügbar!";
-    public final static String CONNECTIONLOST = "Verbindung abgebrochen!";
-    public final static String DEVICENOTFOUND = "Handschuh nicht gefunden! Nochmal versuchen?";
-
-
-    private Boolean running = false;
+    public final static String BLEERROR = "Bluetoothfehler! Nochmal versuchen?";
+    public final static String BLEOK = "BLEOK";
 
     //High level manager used to obtain an instance of an BluetoothAdapter and to conduct overall Bluetooth Management
     private BluetoothManager mBluetoothManager;
@@ -62,28 +56,20 @@ public class BlueToothService extends Service {
     //Defines the scan period for BLE devices
     private static final long SCAN_PERIOD = 5000;
 
-    private ProgressDialog progressDialog;
-
-    public BlueToothService() {
-    }
+    public BlueToothService() { }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if(!running){
-            startBluetoothDetection();
-        }
-        running = true;
+        registerReceiver(playGroundUpdateReceiver,playGroundUpdateIntentFilter());
+        startBluetoothDetection();
         return START_REDELIVER_INTENT;
     }
 
     @Override
-    public void onDestroy() {
-        running = false;
-    }
+    public void onDestroy() {}
 
     @Override
     public IBinder onBind(Intent intent) {
-        // TODO: Return the communication channel to the service.
         throw new UnsupportedOperationException("Not yet implemented");
     }
 
@@ -105,13 +91,13 @@ public class BlueToothService extends Service {
                 try {
                     btScanner = mBluetoothAdapter.getBluetoothLeScanner();
                 } catch (NullPointerException e) {
-                    broadcastUpdate(NOBLUETOOTH);
+                    broadcastUpdate(BLEERROR);
                     Log.d(TAG, "Status Fehler!");
                     e.printStackTrace();
                 }
                 startDetectingDevices();
             } else {
-                broadcastUpdate(NOBLUETOOTH);
+                broadcastUpdate(BLEERROR);
             }
         }
     }
@@ -153,7 +139,7 @@ public class BlueToothService extends Service {
                 if(gloveDevice!= null) {
                     connect();
                 } else {
-                    broadcastUpdate(DEVICENOTFOUND);
+                    broadcastUpdate(BLEERROR);
                 }
             }
         }, SCAN_PERIOD);
@@ -171,7 +157,7 @@ public class BlueToothService extends Service {
             Log.d(TAG, "Trying to use an existing mBluetoothGatt for connection.");
             if (!mBluetoothGatt.connect()) {
                 Log.w(TAG, "Unable to reconnect to device.");
-                broadcastUpdate(CONNECTIONLOST);
+                broadcastUpdate(BLEERROR);
             }
             //Not yet connected
         } else {
@@ -183,7 +169,7 @@ public class BlueToothService extends Service {
 
         if(mBluetoothGatt == null){
             Log.w(TAG, "Unable to connect to device");
-            broadcastUpdate(CONNECTIONLOST);
+            broadcastUpdate(BLEERROR);
         }
     }
 
@@ -196,9 +182,11 @@ public class BlueToothService extends Service {
                 case BluetoothProfile.STATE_CONNECTED:
                     Log.i(TAG, "Connected to GATT server.");
                     mBluetoothGatt.discoverServices();
+                    broadcastUpdate(BLEOK);
                     break;
                 case BluetoothProfile.STATE_DISCONNECTED:
                     Log.i(TAG, "Disconnected from GATT server.");
+                    broadcastUpdate(BLEERROR);
                     break;
             }
         }
@@ -209,12 +197,10 @@ public class BlueToothService extends Service {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 BluetoothGattService service = mBluetoothGatt.getService(HAPTOPT_SERVICE_UUID);
                 motorControlCharacteristic = service.getCharacteristic(CHARACTERISTIC_UUID);
-                if (progressDialog.isShowing()) {
-                    progressDialog.dismiss();
-                }
+                broadcastUpdate(BLEOK);
             } else {
                 Log.w(TAG, "onServicesDiscovered received: " + status);
-                broadcastUpdate(CONNECTIONLOST);
+                broadcastUpdate(BLEERROR);
             }
         }
 
@@ -241,18 +227,31 @@ public class BlueToothService extends Service {
             //Device returns error
             if (!status) {
                 Log.d(TAG, "Status Fehler!");
-                broadcastUpdate(CONNECTIONLOST);
+                broadcastUpdate(BLEERROR);
                 return false;
             }
             return true;
         } else {
-            broadcastUpdate(CONNECTIONLOST);
+            broadcastUpdate(BLEERROR);
             return false;
         }
     }
 
     private void broadcastUpdate(final String action) {
-        final Intent intent = new Intent(action);
+        Intent intent = new Intent(action);
         sendBroadcast(intent);
+    }
+
+    private final BroadcastReceiver playGroundUpdateReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            setMotorCharacteristic(intent.getByteArrayExtra(PlayGroundActivity.EXTRA_BYTES));
+        }
+    };
+
+    private static IntentFilter playGroundUpdateIntentFilter() {
+        final IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(PlayGroundActivity.ACTION_MOTORDATA);
+        return intentFilter;
     }
 }
