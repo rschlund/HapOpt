@@ -26,9 +26,6 @@ public class MainActivity extends AppCompatActivity {
         mainActivity = this;
         //Make sure Bluetooth is on
         switchBluetoothOn(this);
-        registerReceiver(bleUpdateReceiver, bleUpdateIntentFilter());
-        Intent bleServiceIntent = new Intent(this, BlueToothService.class);
-        startService(bleServiceIntent);
         setContentView(R.layout.activity_main);
     }
 
@@ -50,32 +47,4 @@ public class MainActivity extends AppCompatActivity {
             intent.putExtra("GameType", SKILLGAME);
         startActivity(intent);
     }
-
-    private final BroadcastReceiver bleUpdateReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            final String action = intent.getAction();
-            if(intent.getAction() == BlueToothService.DEVICENOTFOUND) {
-                AlertDialog.Builder alert = new AlertDialog.Builder(mainActivity);
-                alert.setMessage(action).setTitle("Bluetooth Connectivity");
-                alert.setNeutralButton("Ok", new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        dialog.cancel();
-                    }
-                });
-                alert.show();
-            } else {
-
-            }
-        }
-    };
-
-    private static IntentFilter bleUpdateIntentFilter() {
-        final IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(BlueToothService.NOBLUETOOTH);
-        intentFilter.addAction(BlueToothService.CONNECTIONLOST);
-        intentFilter.addAction(BlueToothService.DEVICENOTFOUND);
-        return intentFilter;
-    }
-
 }

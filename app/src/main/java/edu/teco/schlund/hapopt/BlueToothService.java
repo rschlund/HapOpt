@@ -63,14 +63,8 @@ public class BlueToothService extends Service {
     private static final long SCAN_PERIOD = 5000;
 
     private ProgressDialog progressDialog;
-    private Activity activity;
-
-    public BlueToothService(Activity activity) {
-        this.activity = activity;
-    }
 
     public BlueToothService() {
-        this.activity = null;
     }
 
     @Override
@@ -114,12 +108,10 @@ public class BlueToothService extends Service {
                     broadcastUpdate(NOBLUETOOTH);
                     Log.d(TAG, "Status Fehler!");
                     e.printStackTrace();
-                    activity.finish();
                 }
                 startDetectingDevices();
             } else {
                 broadcastUpdate(NOBLUETOOTH);
-                activity.finish();
             }
         }
     }
@@ -180,7 +172,6 @@ public class BlueToothService extends Service {
             if (!mBluetoothGatt.connect()) {
                 Log.w(TAG, "Unable to reconnect to device.");
                 broadcastUpdate(CONNECTIONLOST);
-                activity.finish();//finishing activity
             }
             //Not yet connected
         } else {
@@ -193,7 +184,6 @@ public class BlueToothService extends Service {
         if(mBluetoothGatt == null){
             Log.w(TAG, "Unable to connect to device");
             broadcastUpdate(CONNECTIONLOST);
-            activity.finish();//finishing activity
         }
     }
 
@@ -225,7 +215,6 @@ public class BlueToothService extends Service {
             } else {
                 Log.w(TAG, "onServicesDiscovered received: " + status);
                 broadcastUpdate(CONNECTIONLOST);
-                activity.finish();//finishing activity
             }
         }
 
@@ -253,13 +242,11 @@ public class BlueToothService extends Service {
             if (!status) {
                 Log.d(TAG, "Status Fehler!");
                 broadcastUpdate(CONNECTIONLOST);
-                activity.finish();//finishing activity
                 return false;
             }
             return true;
         } else {
             broadcastUpdate(CONNECTIONLOST);
-            activity.finish();//finishing activity
             return false;
         }
     }

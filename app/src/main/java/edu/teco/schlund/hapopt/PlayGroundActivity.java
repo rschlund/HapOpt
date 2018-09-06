@@ -1,6 +1,12 @@
 package edu.teco.schlund.hapopt;
 
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -42,6 +48,9 @@ public class PlayGroundActivity extends AppCompatActivity {
     private int activeFinger;
     private BlueToothService bleService;
 
+    private Activity activity;
+    private Intent bleServiceIntent;
+
     public PlayGroundActivity() {
         STARTTIMETOLICK = 1000;
         FINGERS = 4;
@@ -59,11 +68,13 @@ public class PlayGroundActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_play_ground);
-
+        activity = this;
         //Make sure bluetooth is on
         switchBluetoothOn(this);
-
-        bleService = new BlueToothService(this);
+        registerReceiver(bleUpdateReceiver, bleUpdateIntentFilter());
+        bleServiceIntent = new Intent(this, BlueToothService.class);
+        startService(bleServiceIntent);
+        bleService = new BlueToothService();
         gameType = getIntent().getStringExtra("GameType");
         gameSkills = getIntent().getStringExtra("GameSkill");
         TextView advice = findViewById(R.id.adviceText);
@@ -102,6 +113,10 @@ public class PlayGroundActivity extends AppCompatActivity {
     @Override
     protected void onStart(){
         super.onStart();
+        setStartButton();
+    }
+
+    private void setStartButton(){
         startButton = findViewById(R.id.startButton);
         startButton.setOnClickListener(startButtonListener);
         startButton.setVisibility(View.VISIBLE);
@@ -327,5 +342,37 @@ public class PlayGroundActivity extends AppCompatActivity {
         }
 
         return out;
+    }
+    private final BroadcastReceiver bleUpdateReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            final String action = intent.getAction();
+            AlertDialog.Builder alert = new AlertDialog.Builder(activity);
+            alert.setMessage(action).setTitle("Bluetooth Connectivity");
+            alert.setPositiveButton("Ja", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int id) {
+                    dialog.cancel();
+                    stopService(bleServiceIntent);
+                    startService(bleServiceIntent);
+                    setStartButton();
+                }
+            });
+            alert.setPositiveButton("Nein", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int id) {
+                    dialog.cancel();
+                    activity.finish();
+                }
+            });
+
+            alert.show();
+        }
+    };
+
+    private static IntentFilter bleUpdateIntentFilter() {
+        final IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(BlueToothService.NOBLUETOOTH);
+        intentFilter.addAction(BlueToothService.CONNECTIONLOST);
+        intentFilter.addAction(BlueToothService.DEVICENOTFOUND);
+        return intentFilter;
     }
 }
