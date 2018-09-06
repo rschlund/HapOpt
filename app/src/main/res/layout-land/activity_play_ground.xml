@@ -7,59 +7,56 @@
 
     <Button
         android:id="@+id/finger1Button"
-        android:layout_width="87dp"
-        android:layout_height="68dp"
-        android:layout_marginBottom="12dp"
-        android:background="@drawable/button_border"
-        app:layout_constraintBottom_toBottomOf="@id/guideline2"
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:layout_marginBottom="20dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginStart="8dp"
+        android:background="@drawable/button_shape"
+        app:layout_constraintBottom_toTopOf="@+id/guideline2"
         app:layout_constraintEnd_toStartOf="@+id/finger2Button"
-        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintHorizontal_bias="0.285"
         app:layout_constraintStart_toStartOf="parent" />
 
     <Button
         android:id="@+id/finger2Button"
-        android:layout_width="87dp"
-        android:layout_height="68dp"
-        android:layout_marginBottom="12dp"
-        android:background="@drawable/button_border"
-        app:layout_constraintBottom_toBottomOf="@id/guideline2"
-        app:layout_constraintEnd_toStartOf="@+id/finger3Button"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toEndOf="@+id/finger1Button" />
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:layout_marginBottom="32dp"
+        android:layout_marginEnd="4dp"
+        android:background="@drawable/button_shape"
+        app:layout_constraintBottom_toTopOf="@+id/guideline2"
+        app:layout_constraintEnd_toStartOf="@+id/finger3Button" />
 
     <Button
         android:id="@+id/finger3Button"
-        android:layout_width="87dp"
-        android:layout_height="68dp"
-        android:layout_marginBottom="12dp"
-        android:background="@drawable/button_border"
-        app:layout_constraintBottom_toBottomOf="@id/guideline2"
-        app:layout_constraintEnd_toStartOf="@+id/finger4Button"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toEndOf="@+id/finger2Button" />
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:layout_marginBottom="28dp"
+        android:layout_marginEnd="28dp"
+        android:background="@drawable/button_shape"
+        app:layout_constraintBottom_toTopOf="@+id/guideline2"
+        app:layout_constraintEnd_toStartOf="@+id/finger4Button" />
 
     <Button
         android:id="@+id/finger4Button"
-        android:layout_width="87dp"
-        android:layout_height="68dp"
-        android:layout_marginBottom="12dp"
-        android:background="@drawable/button_border"
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:layout_marginBottom="8dp"
+        android:layout_marginEnd="28dp"
+        android:background="@drawable/button_shape"
         app:layout_constraintBottom_toBottomOf="@id/guideline2"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
-        app:layout_constraintStart_toEndOf="@+id/finger3Button" />
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <ImageView
         android:id="@+id/pointFinger1"
         android:layout_width="60dp"
         android:layout_height="70dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
+        android:layout_marginBottom="20dp"
         android:contentDescription="@string/app_name"
+        app:layout_constraintBottom_toTopOf="@+id/finger1Button"
         app:layout_constraintEnd_toEndOf="@+id/finger1Button"
-        app:layout_constraintHorizontal_bias="0.099"
         app:layout_constraintStart_toStartOf="@+id/finger1Button"
-        app:layout_constraintTop_toTopOf="@+id/pointFinger2"
         app:srcCompat="@drawable/pfeil" />
 
     <ImageView
@@ -69,7 +66,7 @@
         android:contentDescription="@string/app_name"
         app:layout_constraintEnd_toEndOf="@+id/finger2Button"
         app:layout_constraintStart_toStartOf="@+id/finger2Button"
-        app:layout_constraintTop_toTopOf="@+id/pointFinger3"
+        app:layout_constraintTop_toTopOf="@+id/pointFinger1"
         app:srcCompat="@drawable/pfeil" />
 
     <ImageView
@@ -77,22 +74,20 @@
         android:layout_width="60dp"
         android:layout_height="70dp"
         android:contentDescription="@string/app_name"
-        app:layout_constraintBottom_toBottomOf="@+id/pointFinger4"
         app:layout_constraintEnd_toEndOf="@+id/finger3Button"
+        app:layout_constraintHorizontal_bias="0.533"
         app:layout_constraintStart_toStartOf="@+id/finger3Button"
-        app:layout_constraintTop_toTopOf="@+id/pointFinger4"
-        app:layout_constraintVertical_bias="0.0"
+        app:layout_constraintTop_toTopOf="@+id/pointFinger2"
         app:srcCompat="@drawable/pfeil" />
 
     <ImageView
         android:id="@+id/pointFinger4"
         android:layout_width="60dp"
         android:layout_height="70dp"
-        android:layout_marginBottom="8dp"
         android:contentDescription="@string/app_name"
-        app:layout_constraintBottom_toTopOf="@+id/finger4Button"
         app:layout_constraintEnd_toEndOf="@+id/finger4Button"
         app:layout_constraintStart_toStartOf="@+id/finger4Button"
+        app:layout_constraintTop_toTopOf="@+id/pointFinger3"
         app:srcCompat="@drawable/pfeil" />
 
     <Button
@@ -116,7 +111,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        app:layout_constraintGuide_percent="0.64" />
+        app:layout_constraintGuide_percent="0.8" />
 
     <TextView
         android:id="@+id/adviceText"

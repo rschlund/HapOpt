@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">HapOpt</string>
+    <string name="use_arrow">Klick den Button auf den der Pfeil zeigt!</string>
+    <string name="use_vibration">Klick den Button, dessen Finger vibriert</string>
 </resources>

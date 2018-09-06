@@ -4,6 +4,7 @@
 
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:allowBackup="true"
@@ -12,20 +13,43 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".MainActivity">
+        <activity android:name=".MainActivity"
+            android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".SelectHaptOptActivity" />
+        <!-- Parent Activity and Meta data activates up Navigation in Menu-->
+        <!-- singleTop prevents Activity from being destroyed through up navigation-->
+        <activity
+            android:name=".SelectHaptOptActivity"
+            android:label="Anzeigeart"
+            android:launchMode="singleTop"
+            android:parentActivityName=".MainActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="edu.teco.schlund.hapopt.MainActivity" />
+        </activity>
         <activity
             android:name=".PlayGroundActivity"
-            android:screenOrientation="landscape" />
-        <activity android:name=".ResultActivity" />
-        <activity android:name=".BTDetectActivity" />
-        <activity android:name=".bluetooth.BluetoothDetectActivity"></activity>
+            android:launchMode="singleTop"
+            android:label="Testdurchführung"
+            android:screenOrientation="landscape"
+            android:parentActivityName=".SelectHaptOptActivity">
+        <meta-data
+            android:name="android.support.PARENT_ACTIVITY"
+            android:value="edu.teco.schlund.hapopt.PlayGroundActivity" />
+        </activity>
+        <activity android:name=".ResultActivity"
+            android:label="Ergebnis"
+            android:launchMode="singleTop"
+            android:parentActivityName=".PlayGroundActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="edu.teco.schlund.hapopt.PlayGroundActivity" />
+        </activity>
     </application>
 
 </manifest>
