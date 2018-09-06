@@ -143,11 +143,11 @@ public class PlayGroundActivity extends AppCompatActivity {
     protected void onDestroy(){
         super.onDestroy();
         //Close Gattserver
-/*        if (mBluetoothGatt != null) {
+        if (mBluetoothGatt != null) {
             mBluetoothGatt.disconnect();
             mBluetoothGatt.close();
             mBluetoothGatt = null;
-        }*/
+        }
     }
 
     @Override
@@ -157,7 +157,6 @@ public class PlayGroundActivity extends AppCompatActivity {
 
     //if gametype is reaction then rungame produces random delays between indication of button to be clicked
     private void runGame(){
-        if(gameType.equals(MainActivity.REACTIONGAME)) {
         delayHandler.postDelayed(new Runnable() {
             @Override
             public void run() {
@@ -166,10 +165,6 @@ public class PlayGroundActivity extends AppCompatActivity {
                 startMillis = System.nanoTime();
             }
         }, getDelay());
-        } else {
-            activateSkills();
-            startMillis = System.nanoTime();
-        }
     }
 
     //Defines delay for Finger button to be clicked in Skill Game
@@ -243,8 +238,15 @@ public class PlayGroundActivity extends AppCompatActivity {
     }
 
     private int getDelay(){
-            int MAXDELAY = 3000;
-            return new Random().nextInt(MAXDELAY);
+        int MAXDELAY = 3000;
+        int SKILLDELAY = 250;
+        switch (gameType){
+            case MainActivity.REACTIONGAME:
+                return new Random().nextInt(MAXDELAY);
+            case MainActivity.SKILLGAME:
+                return SKILLDELAY;
+        }
+        return 0;
     }
 
     private void activateFingerButtons(boolean activate){
