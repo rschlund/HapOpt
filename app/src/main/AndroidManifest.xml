@@ -13,7 +13,8 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".MainActivity"
+        <activity
+            android:name=".MainActivity"
             android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -21,8 +22,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <!-- Parent Activity and Meta data activates up Navigation in Menu-->
-        <!-- singleTop prevents Activity from being destroyed through up navigation-->
+        <!-- Parent Activity and Meta data activates up Navigation in Menu -->
+        <!-- singleTop prevents Activity from being destroyed through up navigation -->
         <activity
             android:name=".SelectHaptOptActivity"
             android:label="Anzeigeart"
@@ -34,15 +35,16 @@
         </activity>
         <activity
             android:name=".PlayGroundActivity"
-            android:launchMode="singleTop"
             android:label="Testdurchführung"
-            android:screenOrientation="landscape"
-            android:parentActivityName=".SelectHaptOptActivity">
-        <meta-data
-            android:name="android.support.PARENT_ACTIVITY"
-            android:value="edu.teco.schlund.hapopt.PlayGroundActivity" />
+            android:launchMode="singleTop"
+            android:parentActivityName=".SelectHaptOptActivity"
+            android:screenOrientation="landscape">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="edu.teco.schlund.hapopt.PlayGroundActivity" />
         </activity>
-        <activity android:name=".ResultActivity"
+        <activity
+            android:name=".ResultActivity"
             android:label="Ergebnis"
             android:launchMode="singleTop"
             android:parentActivityName=".PlayGroundActivity">
@@ -50,6 +52,11 @@
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="edu.teco.schlund.hapopt.PlayGroundActivity" />
         </activity>
+
+        <service
+            android:name=".BlueToothService"
+            android:enabled="true"
+            android:exported="true"></service>
     </application>
 
 </manifest>

@@ -59,7 +59,6 @@ public class PlayGroundActivity extends AppCompatActivity {
     private Button[] fingerButtons;
     private ImageView[] pointFingers;
     private int activeFinger;
-    private int bluetootStatus;
 
     public PlayGroundActivity() {
         STARTTIMETOLICK = 1000;
@@ -93,7 +92,7 @@ public class PlayGroundActivity extends AppCompatActivity {
         advice.setVisibility(View.VISIBLE);
         initFingerButtons();
 
-        if(gameSkills.equals("radioHapt")||gameSkills.equals("radioBoth") && bluetootStatus == BluetoothProfile.STATE_DISCONNECTED) {
+        if(gameSkills.equals("radioHapt")||gameSkills.equals("radioBoth")) {
             progressDialog = ProgressDialog.show(this, "In Arbeit...", "Suche Handschuh...", true,
                     false);
             startBluetoothDetection();
@@ -387,7 +386,7 @@ public class PlayGroundActivity extends AppCompatActivity {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     //High level manager used to obtain an instance of an BluetoothAdapter and to conduct overall Bluetooth Management
-    BluetoothManager mBluetoothManager;
+    private BluetoothManager mBluetoothManager;
 
     /**
      *This class provides methods to perform scan related operations for Bluetooth LE devices. An application can scan for a particular
@@ -547,12 +546,10 @@ public class PlayGroundActivity extends AppCompatActivity {
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
             switch (newState){
                 case BluetoothProfile.STATE_CONNECTED:
-                    bluetootStatus = BluetoothProfile.STATE_CONNECTED;
                     Log.i(TAG, "Connected to GATT server.");
                     mBluetoothGatt.discoverServices();
                     break;
                 case BluetoothProfile.STATE_DISCONNECTED:
-                    bluetootStatus = BluetoothProfile.STATE_DISCONNECTED;
                     Log.i(TAG, "Disconnected from GATT server.");
                     break;
             }
