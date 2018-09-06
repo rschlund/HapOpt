@@ -15,6 +15,7 @@ import android.bluetooth.BluetoothProfile;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanResult;
+import android.content.BroadcastReceiver;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.AsyncTask;
@@ -27,6 +28,9 @@ import java.util.UUID;
 public class BlueToothService extends Service {
 
     private final static String TAG = BlueToothService.class.getSimpleName();
+    public final static String NOBLUETOOTH = "NOBLUETOOTH";
+    public final static String CONNECTIONLOST = "CONNECTIONLOST";
+
 
     private Boolean running = false;
 
@@ -106,16 +110,14 @@ public class BlueToothService extends Service {
                 try {
                     btScanner = mBluetoothAdapter.getBluetoothLeScanner();
                 } catch (NullPointerException e) {
-                    Intent intent = new Intent();
-                    activity.setResult(SelectHaptOptActivity.NOBLUETOOTH, intent);
-                    activity.finish();//finishing activity
+                    broadcastUpdate(NOBLUETOOTH);
                     Log.d(TAG, "Status Fehler!");
                     e.printStackTrace();
+                    activity.finish();
                 }
                 startDetectingDevices();
             } else {
-                Intent intent = new Intent();
-                activity.setResult(SelectHaptOptActivity.NOBLUETOOTH, intent);
+                broadcastUpdate(NOBLUETOOTH);
                 activity.finish();
             }
         }
@@ -194,8 +196,7 @@ public class BlueToothService extends Service {
             Log.d(TAG, "Trying to use an existing mBluetoothGatt for connection.");
             if (!mBluetoothGatt.connect()) {
                 Log.w(TAG, "Unable to reconnect to device.");
-                Intent intent = new Intent();
-                activity.setResult(SelectHaptOptActivity.CONNECTIONLOST, intent);
+                broadcastUpdate(CONNECTIONLOST);
                 activity.finish();//finishing activity
             }
             //Not yet connected
@@ -208,8 +209,7 @@ public class BlueToothService extends Service {
 
         if(mBluetoothGatt == null){
             Log.w(TAG, "Unable to connect to device");
-            Intent intent = new Intent();
-            activity.setResult(SelectHaptOptActivity.CONNECTIONLOST, intent);
+            broadcastUpdate(CONNECTIONLOST);
             activity.finish();//finishing activity
         }
     }
@@ -241,8 +241,7 @@ public class BlueToothService extends Service {
                 }
             } else {
                 Log.w(TAG, "onServicesDiscovered received: " + status);
-                Intent intent=new Intent();
-                activity.setResult(SelectHaptOptActivity.CONNECTIONLOST,intent);
+                broadcastUpdate(CONNECTIONLOST);
                 activity.finish();//finishing activity
             }
         }
@@ -269,18 +268,21 @@ public class BlueToothService extends Service {
             boolean status = mBluetoothGatt.writeCharacteristic(motorControlCharacteristic);
             //Device returns error
             if (!status) {
-                Intent intent=new Intent();
-                activity.setResult(SelectHaptOptActivity.CONNECTIONLOST,intent);
-                activity.finish();//finishing activity
                 Log.d(TAG, "Status Fehler!");
+                broadcastUpdate(CONNECTIONLOST);
+                activity.finish();//finishing activity
                 return false;
             }
             return true;
         } else {
-            Intent intent=new Intent();
-            activity.setResult(SelectHaptOptActivity.CONNECTIONLOST,intent);
+            broadcastUpdate(CONNECTIONLOST);
             activity.finish();//finishing activity
             return false;
         }
+    }
+
+    private void broadcastUpdate(final String action) {
+        final Intent intent = new Intent(action);
+        sendBroadcast(intent);
     }
 }
