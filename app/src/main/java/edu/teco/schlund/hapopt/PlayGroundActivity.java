@@ -1,6 +1,7 @@
 package edu.teco.schlund.hapopt;
 
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.BroadcastReceiver;
@@ -11,6 +12,7 @@ import android.content.IntentFilter;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
@@ -50,7 +52,6 @@ public class PlayGroundActivity extends AppCompatActivity {
     private Button[] fingerButtons;
     private ImageView[] pointFingers;
     private int activeFinger;
-    private BlueToothService bleService;
 
     private Activity activity;
     private Intent bleServiceIntent;
@@ -77,10 +78,18 @@ public class PlayGroundActivity extends AppCompatActivity {
         activity = this;
         //Make sure bluetooth is on
         switchBluetoothOn(this);
-        registerReceiver(bleUpdateReceiver, bleUpdateIntentFilter());
-        bleService = new BlueToothService();
-        bleServiceIntent = new Intent(this, BlueToothService.class);
-        startService(bleServiceIntent);
+
+        try {
+            registerReceiver(bleUpdateReceiver, bleUpdateIntentFilter());
+        } catch (Exception e){
+            Log.d(TAG, "registered");
+        }
+        if (!isMyServiceRunning(BlueToothService.class)) {
+            bleServiceIntent = new Intent(this, BlueToothService.class);
+            startService(bleServiceIntent);
+            progressDialog = ProgressDialog.show(activity, "In Arbeit...", "Suche Handschuh...", true,
+                    false);
+        }
         gameType = getIntent().getStringExtra("GameType");
         gameSkills = getIntent().getStringExtra("GameSkill");
         TextView advice = findViewById(R.id.adviceText);
@@ -91,8 +100,6 @@ public class PlayGroundActivity extends AppCompatActivity {
         }
         advice.setVisibility(View.VISIBLE);
         initFingerButtons();
-        progressDialog = ProgressDialog.show(activity, "In Arbeit...", "Suche Handschuh...", true,
-                false);
     }
 
     //Initializes buttons to be pressed during test and Arrows indicating button to be pressed
@@ -141,6 +148,7 @@ public class PlayGroundActivity extends AppCompatActivity {
     @Override
     protected void onDestroy(){
         super.onDestroy();
+        unregisterReceiver(bleUpdateReceiver);
     }
 
     //if gametype is reaction then rungame produces random delays between indication of button to be clicked
@@ -356,29 +364,39 @@ public class PlayGroundActivity extends AppCompatActivity {
     private final BroadcastReceiver bleUpdateReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if(progressDialog.isShowing()) progressDialog.dismiss();
             final String action = intent.getAction();
             switch (action) {
                 case BlueToothService.BLEERROR:
-                AlertDialog.Builder alert = new AlertDialog.Builder(activity);
-                alert.setMessage(action).setTitle("Bluetooth Connectivity");
-                alert.setPositiveButton("Ja", new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        dialog.cancel();
-                        stopService(bleServiceIntent);
-                        startService(bleServiceIntent);
-                        setStartButton();
+                    if(progressDialog == null){
+                        progressDialog = ProgressDialog.show(activity, "In Arbeit...", "Suche Handschuh...", true,
+                                false);
                     }
-                });
-                alert.setPositiveButton("Nein", new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int id) {
-                        dialog.cancel();
-                        activity.finish();
-                    }
-                });
+                    if(progressDialog.isShowing()) progressDialog.dismiss();
+                    AlertDialog.Builder alert = new AlertDialog.Builder(activity);
+                    alert.setMessage(action).setTitle("Bluetooth Connectivity");
+                    alert.setPositiveButton("Ja", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            dialog.cancel();
+                            if(isMyServiceRunning(BlueToothService.class)) {
+                                stopService(bleServiceIntent);
+                            }
+                            startService(bleServiceIntent);
+                            setStartButton();
+                            progressDialog.show();
+                        }
+                    });
+                    alert.setPositiveButton("Nein", new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int id) {
+                            dialog.cancel();
+                            activity.finish();
+                        }
+                    });
 
-                alert.show();
-                break;
+                    alert.show();
+                    break;
+                case BlueToothService.BLEOK:
+                    if(progressDialog.isShowing()) progressDialog.dismiss();
+                    break;
             }
         }
     };
@@ -389,4 +407,15 @@ public class PlayGroundActivity extends AppCompatActivity {
         intentFilter.addAction(BlueToothService.BLEOK);
         return intentFilter;
     }
+
+    private boolean isMyServiceRunning(Class<?> serviceClass) {
+        ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (serviceClass.getName().equals(service.service.getClassName())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 }
