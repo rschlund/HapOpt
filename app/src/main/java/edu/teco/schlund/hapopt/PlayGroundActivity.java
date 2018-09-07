@@ -34,8 +34,7 @@ public class PlayGroundActivity extends AppCompatActivity {
     final static public String STARTDETECTION = "STARTDETECTION";
 
     final private int SKILLRUNS;
-    final int REACTIONRUNS;
-    final int CLICKDELAY;
+    final private int REACTIONRUNS;
     final private int FINGERS;
     final private int STARTTIMETOLICK;
     final private double REDUCETIMETOCLICK;
@@ -67,7 +66,6 @@ public class PlayGroundActivity extends AppCompatActivity {
         FINGERS = 4;
         SKILLRUNS = 40;
         REACTIONRUNS = 15;
-        CLICKDELAY = 150;
         REDUCETIMETOCLICK = 0.98;
         String MOTORSOFF = "00000000";
         String MOTOR1 = "FF000000";
@@ -110,6 +108,34 @@ public class PlayGroundActivity extends AppCompatActivity {
         initFingerButtons();
     }
 
+    @Override
+    protected void onStart(){
+        super.onStart();
+        setStartButton();
+    }
+
+    @Override
+    protected void onResume(){
+        super.onResume();
+        //Make sure bluetooth is on
+        switchBluetoothOn(this);
+    }
+
+    @Override
+    protected void onDestroy(){
+        super.onDestroy();
+        bleError = true;
+        deactivateSkills();
+        unregisterReceiver(bleUpdateReceiver);
+    }
+
+    @Override
+    protected void onPause(){
+        super.onPause();
+        bleError = true;
+        deactivateSkills();
+    }
+
     //Initializes buttons to be pressed during test and Arrows indicating button to be pressed
     private void initFingerButtons(){
         fingerButtons = new Button[FINGERS];
@@ -132,12 +158,7 @@ public class PlayGroundActivity extends AppCompatActivity {
         }
     }
 
-    @Override
-    protected void onStart(){
-        super.onStart();
-        setStartButton();
-    }
-
+    //Activates buttoon to start game
     private void setStartButton(){
         startButton = findViewById(R.id.startButton);
         startButton.setOnClickListener(startButtonListener);
@@ -146,26 +167,8 @@ public class PlayGroundActivity extends AppCompatActivity {
         startButton.setClickable(true);
     }
 
-    @Override
-    protected void onResume(){
-        super.onResume();
-        //Make sure bluetooth is on
-        switchBluetoothOn(this);
-    }
-
-    @Override
-    protected void onDestroy(){
-        super.onDestroy();
-        unregisterReceiver(bleUpdateReceiver);
-    }
-
-    @Override
-    protected void onPause(){
-        super.onPause();
-        bleError = true;
-    }
-
     //if gametype is reaction then rungame produces random delays between indication of button to be clicked
+    //if gametype is skill rungame defines a gap between two laps
     private void runGame(){
         if(!bleError) {
             delayHandler.postDelayed(new Runnable() {
@@ -184,7 +187,6 @@ public class PlayGroundActivity extends AppCompatActivity {
     //Defines delay for Finger button to be clicked in Skill Game
     //Delay is slowly decreased to increase difficulty
     private void runTimetoClick(){
-
         timeToClick = (int) Math.round(timeToClick * REDUCETIMETOCLICK);
         delayHandler.postDelayed(new Runnable() {
             @Override
@@ -206,7 +208,7 @@ public class PlayGroundActivity extends AppCompatActivity {
         }, timeToClick);
     }
 
-    //Activates skills for one lap in game
+    //Activates skills for a lap in game
     private void activateSkills(){
         activeFinger = (int) (Math.random() * 4);
         activateFingerButtons(true);
@@ -224,7 +226,8 @@ public class PlayGroundActivity extends AppCompatActivity {
             default:
                 break;
         }
-        runTimetoClick();
+        if(gameType.equals(MainActivity.SKILLGAME))
+            runTimetoClick();
     }
 
     //Deactivates skills between two laps in game
@@ -277,31 +280,21 @@ public class PlayGroundActivity extends AppCompatActivity {
         clicked = true;
         long stopTime = System.nanoTime();
         deactivateSkills();
-        switch (gameType) {
-            case MainActivity.REACTIONGAME:
-                if (runs < REACTIONRUNS) {
-                    runs++;
-                    if (buttonID == fingerButtons[activeFinger].getId())
-                        countMillis = countMillis + (stopTime - startMillis);
-                    else
-                        errorCount++;
-                } else {
-                    stopGame();
-                }
-                break;
-            case MainActivity.SKILLGAME:
-                if (runs < SKILLRUNS) {
-                    runs++;
-                    if (buttonID == fingerButtons[activeFinger].getId())
-                        countMillis = countMillis + (stopTime - startMillis);
-                    else
-                        errorCount++;
-                } else {
-                    stopGame();
-                }
-                break;
-            default:
-                break;
+        int maxRuns;
+        if(gameType.equals(MainActivity.REACTIONGAME))
+            maxRuns = REACTIONRUNS;
+        else
+            maxRuns = SKILLRUNS;
+        if (runs < maxRuns) {
+            runs++;
+            if (buttonID == fingerButtons[activeFinger].getId())
+                countMillis = countMillis + (stopTime - startMillis);
+            else
+                errorCount++;
+            if(gameType.equals(MainActivity.REACTIONGAME))
+                runGame();
+        } else {
+            stopGame();
         }
     }
 
@@ -387,11 +380,13 @@ public class PlayGroundActivity extends AppCompatActivity {
         sendBroadcast(intent);
     }
 
+    //Receives Error Messages from BlueToothservice
     private final BroadcastReceiver bleUpdateReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             final String action = intent.getAction();
             switch (action) {
+                //Something is Wrong with ble
                 case BlueToothService.BLEERROR:
                     bleError = true;
                     if(progressDialog == null){
@@ -404,6 +399,7 @@ public class PlayGroundActivity extends AppCompatActivity {
                     alert.setPositiveButton("Ja", new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int id) {
                             dialog.cancel();
+                            //Try again to connect device
                             if(isMyServiceRunning(BlueToothService.class)) {
                                 bleServiceIntent = new Intent(myActivity, BlueToothService.class);
                                 startService(bleServiceIntent);
@@ -440,11 +436,11 @@ public class PlayGroundActivity extends AppCompatActivity {
     private boolean isMyServiceRunning(Class<?> serviceClass) {
         ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
         for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
-            if (serviceClass.getName().equals(service.service.getClassName())) {
+            if (service != null && serviceClass.getName().equals(service.service.getClassName())) {
                 return true;
             }
         }
-        return false;
+            return false;
     }
 
 }

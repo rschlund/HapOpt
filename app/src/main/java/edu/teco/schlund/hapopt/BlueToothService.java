@@ -170,7 +170,8 @@ public class BlueToothService extends Service {
             switch (newState){
                 case BluetoothProfile.STATE_CONNECTED:
                     Log.i(TAG, "Connected to GATT server.");
-                    mBluetoothGatt.discoverServices();
+                    if(mBluetoothGatt.getService(HAPTOPT_SERVICE_UUID)== null)
+                        mBluetoothGatt.discoverServices();
                     broadcastUpdate(BLEOK);
                     break;
                 case BluetoothProfile.STATE_DISCONNECTED:
