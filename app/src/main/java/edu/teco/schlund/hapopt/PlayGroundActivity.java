@@ -31,8 +31,11 @@ public class PlayGroundActivity extends AppCompatActivity {
     final static public String EXTRA_BYTES = "EXTRA_BYTES";
     final static public String EXTRA_ASIZE = "EXTRA_ASIZE";
     final static public String ACTION_MOTORDATA = "ACTION_MOTORDATA";
+    final static public String STARTDETECTION = "STARTDETECTION";
 
     final private int SKILLRUNS;
+    final int REACTIONRUNS;
+    final int CLICKDELAY;
     final private int FINGERS;
     final private int STARTTIMETOLICK;
     final private double REDUCETIMETOCLICK;
@@ -53,15 +56,18 @@ public class PlayGroundActivity extends AppCompatActivity {
     private ImageView[] pointFingers;
     private int activeFinger;
 
-    private Activity activity;
+    private Activity myActivity;
     private Intent bleServiceIntent;
 
+    private Boolean bleError = false;
     private ProgressDialog progressDialog;
 
     public PlayGroundActivity() {
         STARTTIMETOLICK = 1000;
         FINGERS = 4;
         SKILLRUNS = 40;
+        REACTIONRUNS = 15;
+        CLICKDELAY = 150;
         REDUCETIMETOCLICK = 0.98;
         String MOTORSOFF = "00000000";
         String MOTOR1 = "FF000000";
@@ -75,7 +81,7 @@ public class PlayGroundActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_play_ground);
-        activity = this;
+        myActivity = this;
         //Make sure bluetooth is on
         switchBluetoothOn(this);
 
@@ -87,9 +93,11 @@ public class PlayGroundActivity extends AppCompatActivity {
         if (!isMyServiceRunning(BlueToothService.class)) {
             bleServiceIntent = new Intent(this, BlueToothService.class);
             startService(bleServiceIntent);
-            progressDialog = ProgressDialog.show(activity, "In Arbeit...", "Suche Handschuh...", true,
-                    false);
+        } else {
+            broadcastUpdate(STARTDETECTION);
         }
+        progressDialog = ProgressDialog.show(myActivity, "In Arbeit...", "Suche Handschuh...", true,
+                false);
         gameType = getIntent().getStringExtra("GameType");
         gameSkills = getIntent().getStringExtra("GameSkill");
         TextView advice = findViewById(R.id.adviceText);
@@ -151,26 +159,32 @@ public class PlayGroundActivity extends AppCompatActivity {
         unregisterReceiver(bleUpdateReceiver);
     }
 
+    @Override
+    protected void onPause(){
+        super.onPause();
+        bleError = true;
+    }
+
     //if gametype is reaction then rungame produces random delays between indication of button to be clicked
     private void runGame(){
-        if(gameType.equals(MainActivity.REACTIONGAME)) {
-        delayHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-               //Set active finger
-                activateSkills();
-                startMillis = System.nanoTime();
-            }
-        }, getDelay());
+        if(!bleError) {
+            delayHandler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    //Set active finger
+                    activateSkills();
+                    startMillis = System.nanoTime();
+                }
+            }, getDelay());
         } else {
-            activateSkills();
-            startMillis = System.nanoTime();
+            bleError = false;
         }
     }
 
     //Defines delay for Finger button to be clicked in Skill Game
     //Delay is slowly decreased to increase difficulty
     private void runTimetoClick(){
+
         timeToClick = (int) Math.round(timeToClick * REDUCETIMETOCLICK);
         delayHandler.postDelayed(new Runnable() {
             @Override
@@ -210,8 +224,7 @@ public class PlayGroundActivity extends AppCompatActivity {
             default:
                 break;
         }
-        if(gameType.equals(MainActivity.SKILLGAME))
-            runTimetoClick();
+        runTimetoClick();
     }
 
     //Deactivates skills between two laps in game
@@ -234,8 +247,15 @@ public class PlayGroundActivity extends AppCompatActivity {
     }
 
     private int getDelay(){
-            int MAXDELAY = 3000;
-            return new Random().nextInt(MAXDELAY);
+        int MAXDELAY = 3000;
+        int SKILLDELAY = 250;
+        switch (gameType){
+            case MainActivity.REACTIONGAME:
+                return new Random().nextInt(MAXDELAY);
+            case MainActivity.SKILLGAME:
+                return SKILLDELAY;
+        }
+        return 0;
     }
 
     private void activateFingerButtons(boolean activate){
@@ -259,14 +279,12 @@ public class PlayGroundActivity extends AppCompatActivity {
         deactivateSkills();
         switch (gameType) {
             case MainActivity.REACTIONGAME:
-                int REACTIONRUNS = 15;
                 if (runs < REACTIONRUNS) {
                     runs++;
                     if (buttonID == fingerButtons[activeFinger].getId())
                         countMillis = countMillis + (stopTime - startMillis);
                     else
                         errorCount++;
-                    runGame();
                 } else {
                     stopGame();
                 }
@@ -289,23 +307,27 @@ public class PlayGroundActivity extends AppCompatActivity {
 
     //Collects results from a game run
     private void stopGame(){
-        Intent intent = new Intent(this, ResultActivity.class);
-        Double averageMillis = 0.0;
-        if (runs-errorCount>0) {
-            averageMillis = countMillis * 1.0 / ((runs - errorCount) * 1000000);
-            averageMillis = Math.round(averageMillis * 100.0) / 100.0;
+        if (!bleError) {
+            Intent intent = new Intent(this, ResultActivity.class);
+            Double averageMillis = 0.0;
+            if (runs - errorCount > 0) {
+                averageMillis = countMillis * 1.0 / ((runs - errorCount) * 1000000);
+                averageMillis = Math.round(averageMillis * 100.0) / 100.0;
+            }
+            intent.putExtra("GameType", getIntent().getStringExtra("GameType"));
+            intent.putExtra("ReactionTime", String.valueOf(averageMillis));
+            intent.putExtra("Errors", String.valueOf(errorCount));
+            startActivity(intent);
+        } else {
+            bleError = false;
         }
-        intent.putExtra("GameType", getIntent().getStringExtra("GameType"));
-        intent.putExtra("ReactionTime", String.valueOf(averageMillis));
-        intent.putExtra("Errors", String.valueOf(errorCount));
-        startActivity(intent);
-
     }
 
     //Listener for startButton, initializes values and runs game
     private View.OnClickListener startButtonListener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
+            bleError = false;
             findViewById(R.id.adviceText).setVisibility(View.INVISIBLE);
             errorCount = 0;
             runs = 0;
@@ -321,7 +343,6 @@ public class PlayGroundActivity extends AppCompatActivity {
             delayHandler.postDelayed(new Runnable() {
                 @Override
                 public void run() {
-
                     runGame();
                 }
             }, Toast.LENGTH_LONG);
@@ -361,34 +382,42 @@ public class PlayGroundActivity extends AppCompatActivity {
         sendBroadcast(intent);
     }
 
+    private void broadcastUpdate(final String action) {
+        Intent intent = new Intent(action);
+        sendBroadcast(intent);
+    }
+
     private final BroadcastReceiver bleUpdateReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             final String action = intent.getAction();
             switch (action) {
                 case BlueToothService.BLEERROR:
+                    bleError = true;
                     if(progressDialog == null){
-                        progressDialog = ProgressDialog.show(activity, "In Arbeit...", "Suche Handschuh...", true,
+                        progressDialog = ProgressDialog.show(myActivity, "In Arbeit...", "Suche Handschuh...", true,
                                 false);
                     }
                     if(progressDialog.isShowing()) progressDialog.dismiss();
-                    AlertDialog.Builder alert = new AlertDialog.Builder(activity);
+                    AlertDialog.Builder alert = new AlertDialog.Builder(myActivity);
                     alert.setMessage(action).setTitle("Bluetooth Connectivity");
                     alert.setPositiveButton("Ja", new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int id) {
                             dialog.cancel();
                             if(isMyServiceRunning(BlueToothService.class)) {
-                                stopService(bleServiceIntent);
+                                bleServiceIntent = new Intent(myActivity, BlueToothService.class);
+                                startService(bleServiceIntent);
+                            }else {
+                                broadcastUpdate(STARTDETECTION);
                             }
-                            startService(bleServiceIntent);
                             setStartButton();
                             progressDialog.show();
                         }
                     });
-                    alert.setPositiveButton("Nein", new DialogInterface.OnClickListener() {
+                    alert.setNegativeButton("Nein", new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int id) {
                             dialog.cancel();
-                            activity.finish();
+                            myActivity.finish();
                         }
                     });
 

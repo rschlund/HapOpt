@@ -26,7 +26,7 @@ import java.util.UUID;
 public class BlueToothService extends Service {
 
     private final static String TAG = BlueToothService.class.getSimpleName();
-    public final static String BLEERROR = "Bluetoothfehler! Nochmal versuchen?";
+    public final static String BLEERROR = "Kein Kontakt zu Handschuh! Nochmal verbinden?";
     public final static String BLEOK = "BLEOK";
 
     //High level manager used to obtain an instance of an BluetoothAdapter and to conduct overall Bluetooth Management
@@ -56,17 +56,24 @@ public class BlueToothService extends Service {
     //Defines the scan period for BLE devices
     private static final long SCAN_PERIOD = 5000;
 
-    public BlueToothService() { }
+    public BlueToothService() {
+    }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        registerReceiver(playGroundUpdateReceiver,playGroundUpdateIntentFilter());
         startBluetoothDetection();
+        try {
+            registerReceiver(playGroundUpdateReceiver,playGroundUpdateIntentFilter());
+        } catch (Exception e){
+            Log.d(TAG, "registered");
+        }
         return START_REDELIVER_INTENT;
     }
 
     @Override
-    public void onDestroy() {}
+    public void onDestroy() {
+        unregisterReceiver(playGroundUpdateReceiver);
+    }
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -152,25 +159,7 @@ public class BlueToothService extends Service {
      *
      */
     private void connect( ) {
-        // if previously connected, try to reconnect.
-        if(mBluetoothGatt!= null) {
-            Log.d(TAG, "Trying to use an existing mBluetoothGatt for connection.");
-            if (!mBluetoothGatt.connect()) {
-                Log.w(TAG, "Unable to reconnect to device.");
-                broadcastUpdate(BLEERROR);
-            }
-            //Not yet connected
-        } else {
-            // We want to directly connect to the device, so we are setting the autoConnect
-            // parameter to false.
-            mBluetoothGatt = gloveDevice.connectGatt(this, false, mGattCallback);
-            Log.d(TAG, "Trying to create a new connection.");
-        }
-
-        if(mBluetoothGatt == null){
-            Log.w(TAG, "Unable to connect to device");
-            broadcastUpdate(BLEERROR);
-        }
+        mBluetoothGatt = gloveDevice.connectGatt(this, false, mGattCallback);
     }
 
     // Implements callback methods for GATT events that the app cares about.  For example,
@@ -218,7 +207,7 @@ public class BlueToothService extends Service {
     };
 
     //Sets motor indicating which finger button should be clicked
-    protected boolean setMotorCharacteristic(byte[] byteValue) {
+    protected void setMotorCharacteristic(byte[] byteValue) {
         //BluetoothManager ble_manager = (BluetoothManager)getSystemService(BLUETOOTH_SERVICE);
         //if (mBluetoothGatt != null && ble_manager!= null && ble_manager.getConnectionState(mBluetoothGatt.getDevice(), BluetoothProfile.GATT) == BluetoothProfile.STATE_CONNECTED) {
         if (mBluetoothGatt != null && mBluetoothManager!= null && mBluetoothManager.getConnectionState(mBluetoothGatt.getDevice(), BluetoothProfile.GATT) == BluetoothProfile.STATE_CONNECTED) {
@@ -227,13 +216,7 @@ public class BlueToothService extends Service {
             //Device returns error
             if (!status) {
                 Log.d(TAG, "Status Fehler!");
-                broadcastUpdate(BLEERROR);
-                return false;
             }
-            return true;
-        } else {
-            broadcastUpdate(BLEERROR);
-            return false;
         }
     }
 
@@ -245,13 +228,20 @@ public class BlueToothService extends Service {
     private final BroadcastReceiver playGroundUpdateReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            setMotorCharacteristic(intent.getByteArrayExtra(PlayGroundActivity.EXTRA_BYTES));
+            switch (intent.getAction()){
+                case PlayGroundActivity.ACTION_MOTORDATA:
+                    setMotorCharacteristic(intent.getByteArrayExtra(PlayGroundActivity.EXTRA_BYTES));
+                    break;
+                case PlayGroundActivity.STARTDETECTION:
+                    startBluetoothDetection();
+            }
         }
     };
 
     private static IntentFilter playGroundUpdateIntentFilter() {
         final IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(PlayGroundActivity.ACTION_MOTORDATA);
+        intentFilter.addAction(PlayGroundActivity.STARTDETECTION);
         return intentFilter;
     }
 }
