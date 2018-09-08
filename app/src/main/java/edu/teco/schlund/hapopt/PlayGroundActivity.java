@@ -394,30 +394,37 @@ public class PlayGroundActivity extends AppCompatActivity {
                                 false);
                     }
                     if(progressDialog.isShowing()) progressDialog.dismiss();
-                    AlertDialog.Builder alert = new AlertDialog.Builder(myActivity);
-                    alert.setMessage(action).setTitle("Bluetooth Connectivity");
-                    alert.setPositiveButton("Ja", new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialog, int id) {
-                            dialog.cancel();
-                            //Try again to connect device
-                            if(isMyServiceRunning(BlueToothService.class)) {
-                                bleServiceIntent = new Intent(myActivity, BlueToothService.class);
-                                startService(bleServiceIntent);
-                            }else {
-                                broadcastUpdate(STARTDETECTION);
-                            }
-                            setStartButton();
-                            progressDialog.show();
-                        }
-                    });
-                    alert.setNegativeButton("Nein", new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialog, int id) {
-                            dialog.cancel();
-                            myActivity.finish();
-                        }
-                    });
 
-                    alert.show();
+                    final AlertDialog alertDialog;
+                    alertDialog = new AlertDialog.Builder(myActivity).create();
+                    alertDialog.setCanceledOnTouchOutside(false);
+                    alertDialog.setTitle("Bluetooth Connectivity");
+                    alertDialog.setMessage(action);
+                    alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, "Ja",
+                            new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int which) {
+                                    alertDialog.cancel();
+                                    //Try again to connect device
+                                    if(isMyServiceRunning(BlueToothService.class)) {
+                                        bleServiceIntent = new Intent(myActivity, BlueToothService.class);
+                                        startService(bleServiceIntent);
+                                    }else {
+                                        broadcastUpdate(STARTDETECTION);
+                                    }
+                                    setStartButton();
+                                    progressDialog.show();
+                                }
+                            });
+                    alertDialog.setButton(AlertDialog.BUTTON_NEGATIVE, "Nein",
+                            new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int which) {
+                                    alertDialog.cancel();
+                                    myActivity.finish();
+                                }
+                            });
+
+                    alertDialog.show();
+
                     break;
                 case BlueToothService.BLEOK:
                     if(progressDialog.isShowing()) progressDialog.dismiss();
