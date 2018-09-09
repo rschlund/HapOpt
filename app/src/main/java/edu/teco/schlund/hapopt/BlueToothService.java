@@ -23,6 +23,7 @@ import android.util.Log;
 
 import java.util.UUID;
 
+//Defines all necessary function to communicate with a specific ble device
 public class BlueToothService extends Service {
 
     private final static String TAG = BlueToothService.class.getSimpleName();
@@ -127,6 +128,8 @@ public class BlueToothService extends Service {
     * Scanning for Devices
     */
     void startDetectingDevices() {
+        //TODO: Better use startScan(List<ScanFilter> filters, ScanSettings settings, ScanCallback callback) to look
+        //only for one specific device
         AsyncTask.execute(new Runnable() {
             @Override
             public void run() {
@@ -181,7 +184,7 @@ public class BlueToothService extends Service {
             }
         }
 
-        //The necessary services for running game has been discovered -> ready to start
+        //The necessary services for running a game has been discovered -> ready to start
         @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
@@ -209,8 +212,6 @@ public class BlueToothService extends Service {
 
     //Sets motor indicating which finger button should be clicked
     protected void setMotorCharacteristic(byte[] byteValue) {
-        //BluetoothManager ble_manager = (BluetoothManager)getSystemService(BLUETOOTH_SERVICE);
-        //if (mBluetoothGatt != null && ble_manager!= null && ble_manager.getConnectionState(mBluetoothGatt.getDevice(), BluetoothProfile.GATT) == BluetoothProfile.STATE_CONNECTED) {
         if (mBluetoothGatt != null && mBluetoothManager!= null && mBluetoothManager.getConnectionState(mBluetoothGatt.getDevice(), BluetoothProfile.GATT) == BluetoothProfile.STATE_CONNECTED) {
             motorControlCharacteristic.setValue(byteValue);
             boolean status = mBluetoothGatt.writeCharacteristic(motorControlCharacteristic);
