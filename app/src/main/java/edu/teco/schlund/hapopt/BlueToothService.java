@@ -218,6 +218,7 @@ public class BlueToothService extends Service {
             //Device returns error
             if (!status) {
                 Log.d(TAG, "Status Fehler!");
+                broadcastUpdate(BLEERROR);
             }
         }
     }

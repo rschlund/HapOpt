@@ -395,6 +395,9 @@ public class PlayGroundActivity extends AppCompatActivity {
                     }
                     if(progressDialog.isShowing()) progressDialog.dismiss();
 
+                    //Todo:Stop Service to avoid multiple error messages
+                    if(bleServiceIntent != null)
+                        stopService(bleServiceIntent);
                     final AlertDialog alertDialog;
                     alertDialog = new AlertDialog.Builder(myActivity).create();
                     alertDialog.setCanceledOnTouchOutside(false);
@@ -405,7 +408,7 @@ public class PlayGroundActivity extends AppCompatActivity {
                                 public void onClick(DialogInterface dialog, int which) {
                                     alertDialog.cancel();
                                     //Try again to connect device
-                                    if(isMyServiceRunning(BlueToothService.class)) {
+                                    if(!isMyServiceRunning(BlueToothService.class)) {
                                         bleServiceIntent = new Intent(myActivity, BlueToothService.class);
                                         startService(bleServiceIntent);
                                     }else {
