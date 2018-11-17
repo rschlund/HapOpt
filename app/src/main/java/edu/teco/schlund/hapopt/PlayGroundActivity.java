@@ -80,24 +80,26 @@ public class PlayGroundActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_play_ground);
         myActivity = this;
+        gameType = getIntent().getStringExtra("GameType");
+        gameSkills = getIntent().getStringExtra("GameSkill");
         //Make sure bluetooth is on
         switchBluetoothOn(this);
 
-        try {
-            registerReceiver(bleUpdateReceiver, bleUpdateIntentFilter());
-        } catch (Exception e){
-            Log.d(TAG, "registered");
+        if (!gameSkills.equals("radioOpt")) {
+            try {
+                registerReceiver(bleUpdateReceiver, bleUpdateIntentFilter());
+            } catch (Exception e) {
+                Log.d(TAG, "registered");
+            }
+            if (!isMyServiceRunning(BlueToothService.class)) {
+                bleServiceIntent = new Intent(this, BlueToothService.class);
+                startService(bleServiceIntent);
+            } else {
+                broadcastUpdate(STARTDETECTION);
+            }
+            progressDialog = ProgressDialog.show(myActivity, "In Arbeit...", "Suche Handschuh...", true,
+                    false);
         }
-        if (!isMyServiceRunning(BlueToothService.class)) {
-            bleServiceIntent = new Intent(this, BlueToothService.class);
-            startService(bleServiceIntent);
-        } else {
-            broadcastUpdate(STARTDETECTION);
-        }
-        progressDialog = ProgressDialog.show(myActivity, "In Arbeit...", "Suche Handschuh...", true,
-                false);
-        gameType = getIntent().getStringExtra("GameType");
-        gameSkills = getIntent().getStringExtra("GameSkill");
         TextView advice = findViewById(R.id.adviceText);
         if(gameSkills.equals("radioOpt")||gameSkills.equals("radioBoth")) {
             advice.setText(R.string.use_arrow);
